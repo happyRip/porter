@@ -1,19 +1,30 @@
 defmodule Porter do
   use Application
-  alias Alchemy.Client
+  alias Alchemy.{Client, Cogs}
 
   defmodule Commands do
     use Alchemy.Cogs
-    alias Alchemy.Voice
-    alias Alchemy.Client
+    alias Alchemy.{Client, Voice}
+
     Cogs.set_parser(:play, &List.wrap/1)
+
+    # Cogs.def join(id) do
+    #   {:ok, channels} = Client.get_channels(id)
+    #   Voice.join(id, default_voice_channel.id)
+    # end
 
     Cogs.def play(query) do
       {:ok, id} = Cogs.guild_id()
+
       {:ok, url} = Utils.search(query)
+
       Voice.stop_audio(id)
-      {:ok, channel} = Client.get_channels(id)
-      default_voice_channel = Enum.find(channel, &match?(%{name: "General"}, &1))
+
+      {:ok, channels} = Client.get_channels(id)
+
+      default_voice_channel = Enum.find(channels, &match?(%{name: "Spoilers"}, &1))
+      |> IO.inspect()
+
       Voice.join(id, default_voice_channel.id)
       Voice.play_url(id, url)
       Cogs.say("Now playing #{url}")
@@ -36,9 +47,11 @@ defmodule Porter do
 
   def start(_type, _args) do
     token = Application.fetch_env!(:porter, :discord_token)
+    prefix = Application.fetch_env!(:porter, :prefix)
 
     run = Client.start(token)
     use Commands
+    Cogs.set_prefix(prefix)
     run
   end
 end
